@@ -1,0 +1,72 @@
+# Stroop Effect
+##### Daniel Cohen
+##### Udacity Data Analyst Nanodegree Project 1
+##### 7/20/15
+
+### Overview
+The Stroop test shows subjects a word representing a color printed in a certain color ink. If the word red is printed in red, that is called congruent. If the word blue is printed in yellow, that is called incongruent. The Stroop test times how long it takes a subject to name the color of the ink after being shown the word. Here we examine data from 24 subjects who took the Stroop test for both congruent and incongruent conditions.
+
+### Variables and Hypothesis
+
+The independent variable in this experiment is whether the word was shown in a congruent or incongruent manner. The dependent variable is the time it took for the subject to respond with the correct ink color (measured in seconds). We don't know how this data was acquired, but we assume the subjects were taken at random from the sample of interests and that the underlying population will have an apporximately normal distribution of response times. Our null hypothesis is that there is no difference in response time between conditions - that is, it does not matter what the word says for quickly determining color. The alternative hypothesis is that the response times differ, or that the meaning of the word does in fact alter our ability to quickly recognize and name the ink color. I will go further and make the alternative hypothesis that the response time will be *greater* for the incongruent condition. Since this data is paired (each subject underwent both set of conditions), a one-sided, pairwise t-test is an appropriate statistical test to determine whether there is a significant effect or not. I used separate variances because I do not see why the distribution of response times under each condition should have similar variance. I conduct my analysis in R.
+
+### Loading data and descriptive stats
+
+It is assumed that the csv file is in the working directory. The data is loaded in and the summary function shows some measures of central tendecy. The stats package is loaded to examine the standard deviations of the data.
+
+```{r}
+stroop = read.csv('stroopdata.csv')
+summary(stroop)
+library(stats)
+sds = round(c(sd(stroop$Congruent), sd(stroop$Incongruent)),2)
+sds
+```
+
+We see that the Congruent set has mean response time `r round(mean(stroop$Congruent),2)` s and standard deviation `r sds[1]` s and the Incrongruent data has mean `r round(mean(stroop$Incongruent),2)` s and standard deviation `r sds[2]` s.
+
+### Visualizations
+
+A quick histogram of the two types of tests is shown below using R's ggplot2 package.
+
+```{r, fig.align='center'}
+library(ggplot2)
+data = c(stroop$Congruent, stroop$Incongruent)
+group = c(rep('Congruent', 24),rep('Incongruent', 24))
+ggplot(as.data.frame(data), aes(x=data,group=group,fill=as.factor(group))) + 
+    geom_histogram(position="identity", alpha=0.5, breaks=seq(5,39,by = 2), right=TRUE, col="black") +
+    scale_fill_discrete(name="Group") +
+    labs(title = "Histogram of Response Times in Stroop test", x="Response time (s)")
+```
+
+This plot really just visualizes the descriptive stats mentioned above. Clearly the incongruent test has a higher mean reposnse time and the spread is wider because of the two data points to the far right.
+
+A better plot for understanding the effect on each participant might be a scatter plot.
+```{r, fig.align='center'}
+matplot(t(stroop), type = 'b', lty = 1, lwd =1, pch = 1, xaxt = 'n', ylab="Response Time (s)", main="Subjects' response times for both conditions")
+axis(1, at=1:2, labels = c("Congruent","Incongruent"))
+```
+
+This plot shows that every subject saw an increase in response time when going from congruent to incongruent condition, a good hint that our alternative hypothesis may be right.
+
+### Statistical Test
+
+I run a pairwise t-test with the alternative hypothesis that the mean differenec between incongruent and congruent data points is greater than zero. I stuck with the standard alpha level of 0.05. At this significance level we need a t-statistic higher than t-critical of 1.714 (23 degrees of freedom).
+```{r}
+p = with(stroop, t.test(Incongruent, Congruent, paired=TRUE, alternative="greater"))
+pv = round(p$p.value,10)
+p
+```
+The results of the test show a very large t-statistic of about 8, resulting in a p-value of `r pv`, definitely meeting our criteria for significance. So at 95% confidence we can reject the null hypothesis and conclude the response time for the incongruent condition is longer on average than for the congruent condition.
+
+### Conclusion
+
+As hypothesized, the incongruent condition of mismatched word meaning and ink color results in a slower response time than the congruent, matching condition. This is supported with a pairwise t-test at the 95% confidence level. This experiment suggests our brains can read and process a simple word like a color nearly as quickly as we can recognize an actual color. Therefore when the word and color do not match the brain has to take an extra second (or a few) to pick which one we want. I'd be curious to run similar test using words printed in different textures or made out of different materials (3d word blocks), or perhaps use numbers with the congruent condition be an amount of numbers appearing equal to that number (i.e. nine 9's) and the incongruent being an amount different than that number (i.e. three 7's).
+
+### Sources
+
+help with hist plot: 
+[1] http://stackoverflow.com/questions/17879642/creating-a-histogram-with-multiple-data-series-using-multhist-in-r
+[2] http://www.r-bloggers.com/how-to-make-a-histogram-with-ggplot2/
+
+help with scatterplot: 
+[3] http://r.789695.n4.nabble.com/Adding-name-labels-to-x-axis-of-matplot-td850271.html
